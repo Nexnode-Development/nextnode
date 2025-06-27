@@ -2,15 +2,21 @@
 
 import React, { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-// import { User as Usr } from '@/services/auth/types';
+
+// User type definition
+type User = {
+  first_name: string;
+  last_name: string;
+  email: string;
+};
 
 export default function User() {
-  const [user, setUser] = useState<any | undefined>(undefined);
+  const [user, setUser] = useState<User | undefined>(undefined);
 
   useEffect(() => {
     const data = localStorage.getItem("user");
     if (data) {
-      const usr = JSON.parse(data) as any;
+      const usr = JSON.parse(data) as User;
       setUser(usr);
     }
   }, []);
