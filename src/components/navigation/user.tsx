@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { User as Usr } from '@/services/auth/types';
+import React, { useEffect, useState } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+// import { User as Usr } from '@/services/auth/types';
 
 export default function User() {
-  const [user, setUser] = useState<Usr | undefined>(undefined);
+  const [user, setUser] = useState<any | undefined>(undefined);
 
   useEffect(() => {
-    const data = localStorage.getItem('user');
+    const data = localStorage.getItem("user");
     if (data) {
-      const usr = JSON.parse(data) as Usr;
+      const usr = JSON.parse(data) as any;
       setUser(usr);
     }
   }, []);
@@ -18,7 +18,7 @@ export default function User() {
   return (
     <div className="flex items-center gap-4">
       <Avatar className="h-8 w-8 rounded-lg">
-        <AvatarImage src={''} alt={''} />
+        <AvatarImage src={""} alt={""} />
         <AvatarFallback className="rounded-lg">
           {user?.first_name[0]} {user?.last_name[0]}
         </AvatarFallback>

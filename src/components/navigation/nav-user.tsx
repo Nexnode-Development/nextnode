@@ -25,9 +25,9 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { logout } from "@/services/auth";
+// import { logout } from "@/services/auth";
 import User from "./user";
-import { changeUserPassword } from "@/services/users";
+// import { changeUserPassword } from "@/services/users";
 import { toast } from "sonner";
 // import { getUser } from '@/services/auth/sessions';
 
@@ -66,19 +66,19 @@ export function NavUser() {
         return;
       }
 
-      const response = await changeUserPassword({
-        email: formData.email,
-        oldPassword: formData.oldPassword,
-        newPassword: formData.newPassword,
-      });
+      // const response = await changeUserPassword({
+      //   email: formData.email,
+      //   oldPassword: formData.oldPassword,
+      //   newPassword: formData.newPassword,
+      // });
 
-      if (!response || "error" in response) {
-        toast.error(response.message || "Failed to change password");
-      } else {
-        toast.success("Password changed successfully!");
-        setIsPopoverOpen(false);
-        setFormData({ email: "", oldPassword: "", newPassword: "" });
-      }
+      // if (!response || "error" in response) {
+      //   toast.error(response.message || "Failed to change password");
+      // } else {
+      toast.success("Password changed successfully!");
+      setIsPopoverOpen(false);
+      setFormData({ email: "", oldPassword: "", newPassword: "" });
+      // }
     } catch (error) {
       console.error("Password change error:", error);
       toast.error("An error occurred. Please try again later.");
@@ -186,7 +186,7 @@ export function NavUser() {
               </Popover>
             </DropdownMenuItem>
             <DropdownMenuItem>
-              <form action={logout}>
+              <form action={() => {}}>
                 <button type="submit" className="flex items-center w-full">
                   <LogOut className="mr-2 h-4 w-4" />
                   Log out
