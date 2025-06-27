@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Lock, Eye, EyeOff } from "lucide-react";
@@ -12,11 +12,12 @@ import {
   type CreateNewPasswordFormData,
 } from "@/lib/schemas";
 
-function CreateNewPassword() {
+function CreateNewPasswordForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+
   const searchParams = useSearchParams();
 
   // Get token from URL params (would come from reset email link)
@@ -246,4 +247,23 @@ function CreateNewPassword() {
   );
 }
 
-export default CreateNewPassword;
+// Loading fallback component
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
+        <p className="mt-2 text-gray-600">Loading...</p>
+      </div>
+    </div>
+  );
+}
+
+// Main component with Suspense boundary
+export default function CreateNewPassword() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <CreateNewPasswordForm />
+    </Suspense>
+  );
+}
