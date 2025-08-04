@@ -233,7 +233,7 @@ export default function VideoCallPage() {
                   className="object-cover"
                 />
                 <div className="absolute bottom-1 left-1 text-white text-xs bg-black bg-opacity-50 px-1 rounded">
-                  Theresa Webbb
+                  Theresa Webb
                 </div>
               </div>
             </div>
