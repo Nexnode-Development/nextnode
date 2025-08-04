@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Lock, Eye, EyeOff } from "lucide-react";
@@ -40,15 +40,15 @@ function CreateNewPasswordPage() {
     },
   });
 
-  // useEffect(() => {
-  //   const tokenParam = searchParams.get("token");
-  //   if (tokenParam) {
-  //     setToken(tokenParam);
-  //   } else {
-  //     toast.error("Invalid reset link");
-  //     router.push("/forgot-password");
-  //   }
-  // }, [searchParams, router]);
+  useEffect(() => {
+    const tokenParam = searchParams.get("token");
+    if (tokenParam) {
+      setToken(tokenParam);
+    } else {
+      toast.error("Invalid reset link");
+      router.push("/forgot-password");
+    }
+  }, [searchParams, router]);
 
   const onSubmit = async (data: CreateNewPasswordFormData) => {
     if (!token) {
@@ -83,16 +83,16 @@ function CreateNewPasswordPage() {
     router.push("/login");
   };
 
-  // if (!token) {
-  //   return (
-  //     <div className="min-h-screen flex items-center justify-center">
-  //       <div className="text-center">
-  //         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div>
-  //         <p className="mt-4 text-gray-600">Loading...</p>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  if (!token) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex">
@@ -277,4 +277,23 @@ function CreateNewPasswordPage() {
   );
 }
 
-export default CreateNewPasswordPage;
+// Loading component for Suspense fallback
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Loading...</p>
+      </div>
+    </div>
+  );
+}
+
+// Wrapper component with Suspense boundary
+export default function CreateNewPasswordPageWrapper() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <CreateNewPasswordPage />
+    </Suspense>
+  );
+}
