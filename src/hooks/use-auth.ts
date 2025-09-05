@@ -3,12 +3,7 @@
 import { useState, useEffect } from 'react';
 import { getUserFromSession, deleteSession } from '@/app/services/auth/sessions';
 import { Logout } from '@/app/services/auth';
-
-interface User {
-  user_id: string;
-  email: string;
-  role: string;
-}
+import { User } from '@/app/services/auth/types';
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -17,7 +12,17 @@ export function useAuth() {
   const refreshUser = async () => {
     try {
       const userData = await getUserFromSession();
-      setUser(userData);
+      if (userData) {
+        setUser({
+          id: userData.id,
+          fullName: '',
+          email: userData.email,
+          role: userData.role,
+          isEmailVerified: true,
+        });
+      } else {
+        setUser(null);
+      }
     } catch (error) {
       console.error('Error fetching user:', error);
       setUser(null);

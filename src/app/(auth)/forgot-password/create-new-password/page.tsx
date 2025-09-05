@@ -15,54 +15,56 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import {
-  createNewPasswordSchema,
-  type CreateNewPasswordFormData,
+  resetPasswordSchema,
+  type ResetPasswordFormData,
 } from "@/lib/schemas";
 import logo from "@/assets/nexnode-logo.png";
 import Image from "next/image";
 import backgroundImage from "@/assets/background-image.png";
 import { toast, Toaster } from "sonner";
-import { CreateNewPassword } from "@/app/services/auth";
+import { ResetPassword } from "@/app/services/auth";
 
 function CreateNewPasswordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [token, setToken] = useState<string>("");
+  const [userId, setUserId] = useState<string>("");
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const form = useForm<CreateNewPasswordFormData>({
-    resolver: zodResolver(createNewPasswordSchema),
+  const form = useForm<ResetPasswordFormData>({
+    resolver: zodResolver(resetPasswordSchema),
     defaultValues: {
-      password: "",
+      newPassword: "",
       confirmPassword: "",
+      userId: "",
     },
   });
 
   useEffect(() => {
-    const tokenParam = searchParams.get("token");
-    if (tokenParam) {
-      setToken(tokenParam);
+    const userIdParam = searchParams.get("userId");
+    if (userIdParam) {
+      setUserId(userIdParam);
+      form.setValue("userId", userIdParam);
     } else {
       toast.error("Invalid reset link");
       router.push("/forgot-password");
     }
-  }, [searchParams, router]);
+  }, [searchParams, router, form]);
 
-  const onSubmit = async (data: CreateNewPasswordFormData) => {
-    if (!token) {
-      toast.error("Invalid reset token");
+  const onSubmit = async (data: ResetPasswordFormData) => {
+    if (!userId) {
+      toast.error("Invalid reset link");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const result = await CreateNewPassword({
-        password: data.password,
+      const result = await ResetPassword({
+        userId: data.userId,
+        newPassword: data.newPassword,
         confirmPassword: data.confirmPassword,
-        token: token,
       });
 
       if (result.success) {
@@ -83,7 +85,7 @@ function CreateNewPasswordPage() {
     router.push("/login");
   };
 
-  if (!token) {
+  if (!userId) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -161,7 +163,7 @@ function CreateNewPasswordPage() {
               {/* Password Field */}
               <FormField
                 control={form.control}
-                name="password"
+                name="newPassword"
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>

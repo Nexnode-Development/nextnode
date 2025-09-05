@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Smartphone } from "lucide-react";
@@ -14,89 +14,66 @@ import {
   FormControl,
   FormMessage,
 } from "@/components/ui/form";
-import { twoFactorSchema, type TwoFactorFormData } from "@/lib/schemas";
+import { verifyPasswordResetSchema, type VerifyPasswordResetFormData } from "@/lib/schemas";
 import logo from "@/assets/nexnode-logo.png";
 import Image from "next/image";
 import backgroundImage from "@/assets/background-image.png";
 import { toast, Toaster } from "sonner";
-import { VerifyEmail, VerifyLoginOTP, ResendOTP } from "@/app/services/auth";
-import React from "react";
+import { VerifyPasswordReset, ResendOTP } from "@/app/services/auth";
 
-function TwoFactorAuthPage() {
+function VerifyPasswordResetPage() {
   const [isResending, setIsResending] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [isLoginFlow, setIsLoginFlow] = useState(false);
   const router = useRouter();
 
-  React.useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const emailParam = urlParams.get('email');
-    const userIdParam = urlParams.get('userId');
-    
-    if (emailParam && userIdParam) {
-      setEmail(emailParam);
-      setUserId(userIdParam);
-      setIsLoginFlow(true);
-    } else {
-      const storedEmail = sessionStorage.getItem('nexnode_user_email');
-      const storedUserId = sessionStorage.getItem('nexnode_user_id');
-      
-      if (storedEmail) setEmail(storedEmail);
-      if (storedUserId) setUserId(storedUserId);
-      setIsLoginFlow(false);
-    }
-  }, []);
-
-  const form = useForm<TwoFactorFormData>({
-    resolver: zodResolver(twoFactorSchema),
+  const form = useForm<VerifyPasswordResetFormData>({
+    resolver: zodResolver(verifyPasswordResetSchema),
     defaultValues: {
-      code: "",
+      email: "",
+      otp: "",
     },
     mode: "onChange",
   });
 
-  const codeValue = form.watch("code");
+  const codeValue = form.watch("otp");
 
-  const onSubmit = async (data: TwoFactorFormData) => {
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const emailParam = urlParams.get('email');
+    
+    if (emailParam) {
+      setEmail(emailParam);
+      form.setValue('email', emailParam);
+    } else {
+      toast.error("Email not found. Please request password reset again.");
+      router.push("/forgot-password");
+    }
+  }, [router, form]);
+
+  const onSubmit = async (data: VerifyPasswordResetFormData) => {
     setIsVerifying(true);
 
     try {
-      if (!email || !userId) {
-        toast.error("Session expired. Please try again.");
-        router.push(isLoginFlow ? "/login" : "/signup");
+      if (!email) {
+        toast.error("Email not found. Please try again.");
+        router.push("/forgot-password");
         return;
       }
 
-      let result;
-      
-      if (isLoginFlow) {
-        result = await VerifyLoginOTP({ userId, otp: data.code });
-      } else {
-        result = await VerifyEmail({ email, otp: data.code });
-      }
+      const result = await VerifyPasswordReset({ email, otp: data.otp });
 
-      if (result.success) {
-        if (isLoginFlow) {
-          toast.success("Login successful!");
-          sessionStorage.removeItem('nexnode_user_email');
-          sessionStorage.removeItem('nexnode_user_id');
-          router.push("/dashboard");
-        } else {
-          toast.success("Email verified successfully! Please log in.");
-          sessionStorage.removeItem('nexnode_user_email');
-          sessionStorage.removeItem('nexnode_user_id');
-          router.push("/login");
-        }
+      if (result.success && result.data.isValid) {
+        toast.success("OTP verified successfully!");
+        router.push(`/forgot-password/create-new-password?userId=${result.data.userId}`);
       } else {
-        toast.error(result.error || "Verification failed");
-        form.reset();
+        toast.error(result.error || "Invalid OTP");
+        form.reset({ email, otp: "" });
       }
     } catch (error) {
-      console.error("Verification failed:", error);
+      console.error("OTP verification failed:", error);
       toast.error("An unexpected error occurred");
-      form.reset();
+      form.reset({ email, otp: "" });
     } finally {
       setIsVerifying(false);
     }
@@ -111,25 +88,24 @@ function TwoFactorAuthPage() {
         return;
       }
 
-      const purpose = isLoginFlow ? "login" : "registration";
-      const result = await ResendOTP({ email, purpose });
+      const result = await ResendOTP({ email, purpose: "password_reset" });
 
       if (result.success) {
-        toast.success("Verification code resent successfully!");
-        form.reset();
+        toast.success("OTP resent successfully!");
+        form.reset({ email, otp: "" });
       } else {
-        toast.error(result.error || "Failed to resend code");
+        toast.error(result.error || "Failed to resend OTP");
       }
     } catch (error) {
-      console.error("Failed to resend code:", error);
+      console.error("Failed to resend OTP:", error);
       toast.error("An unexpected error occurred");
     } finally {
       setIsResending(false);
     }
   };
 
-  const handleBackToLogin = () => {
-    router.push("/login");
+  const handleBackToForgotPassword = () => {
+    router.push("/forgot-password");
   };
 
   return (
@@ -164,15 +140,15 @@ function TwoFactorAuthPage() {
               Almost There!
             </h1>
             <p className="text-white/90 text-lg mb-8 text-center">
-              Just one more step to secure
+              Verify the code to reset
               <br />
-              your account access
+              your password
             </p>
           </div>
         </div>
       </div>
 
-      {/* Right Side - 2FA Form */}
+      {/* Right Side - OTP Form */}
       <div className="flex-1 bg-white flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
@@ -191,7 +167,7 @@ function TwoFactorAuthPage() {
 
             {/* Title */}
             <h2 className="text-orange-500 text-4xl font-bold mb-4">
-              Two-Factor Authentication
+              Verify OTP
             </h2>
 
             {/* Subtitle */}
@@ -206,7 +182,7 @@ function TwoFactorAuthPage() {
               <div className="flex justify-center">
                 <FormField
                   control={form.control}
-                  name="code"
+                  name="otp"
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
@@ -248,16 +224,16 @@ function TwoFactorAuthPage() {
                   </button>
                 </div>
 
-                {/* Back to Login */}
+                {/* Back to Forgot Password */}
                 <div className="text-center">
                   <Button
                     type="button"
-                    onClick={handleBackToLogin}
+                    onClick={handleBackToForgotPassword}
                     variant="ghost"
                     className="text-gray-500 hover:text-orange-500"
                     disabled={isVerifying || isResending}
                   >
-                    Back to Log In
+                    Back to Forgot Password
                   </Button>
                 </div>
               </div>
@@ -267,9 +243,7 @@ function TwoFactorAuthPage() {
           {/* Additional Info */}
           <div className="mt-8 text-center text-sm text-gray-500">
             <p>
-              {isLoginFlow 
-                ? "Complete your login by entering the verification code sent to your email." 
-                : "Check your email for the 6-digit verification code to activate your account."}
+              Check your email for the 6-digit verification code.
               <br />
               The code will expire in 10 minutes.
             </p>
@@ -280,4 +254,4 @@ function TwoFactorAuthPage() {
   );
 }
 
-export default TwoFactorAuthPage;
+export default VerifyPasswordResetPage;

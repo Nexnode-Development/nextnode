@@ -17,19 +17,12 @@ import {
 } from "@/components/ui/form";
 import Image from "next/image";
 import { toast, Toaster } from "sonner";
-import { z } from "zod";
 import { GoogleAuth, Login } from "@/app/services/auth";
+import { loginSchema, type LoginFormData } from "@/lib/schemas";
 
 import backgroundImage from "@/assets/background-image.png";
 import logo from "@/assets/nexnode-logo.png";
 
-const loginSchema = z.object({
-  email: z.string().email({ message: "Invalid email address" }),
-  password: z.string().min(1, { message: "Password is required" }),
-  rememberMe: z.boolean(),
-});
-
-type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -54,10 +47,11 @@ export default function LoginPage() {
       });
 
       if (result.success) {
-        toast.success("Login successful!");
-        if (result.data.requires_2fa) {
-          router.push("/two-factor");
+        if (result.requiresTwoFactor) {
+          toast.success("Login successful! Please verify your identity.");
+          router.push(`/two-factor?userId=${result.data.userId}`);
         } else {
+          toast.success("Login successful!");
           router.push("/dashboard");
         }
       } else {
@@ -75,7 +69,7 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = async () => {
     try {
-      const result = await GoogleAuth("code");
+      const result = await GoogleAuth({ googleToken: "sample-token" });
 
       if (result.success) {
         toast.success("Google sign in successful!");

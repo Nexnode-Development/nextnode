@@ -26,21 +26,8 @@ import backgroundImage from "@/assets/background-image.png";
 import { toast, Toaster } from "sonner";
 import { Register } from "@/app/services/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useForm } from "react-hook-form";
-
-const signupSchema = z.object({
-  fullName: z.string().min(2, "First name must be at least 2 characters"),
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  phone: z.string().min(1, "Phone number is required"),
-  role: z.string().min(1, "Role is required"),
-  agreeToTerms: z.boolean().refine((val) => val === true, {
-    message: "You must agree to the terms and conditions",
-  }),
-});
-
-type SignupFormData = z.infer<typeof signupSchema>;
+import { signupSchema, type SignupFormData } from "@/lib/schemas";
 
 export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -54,7 +41,7 @@ export default function SignUpPage() {
       password: "",
       phone: "",
       role: "",
-      agreeToTerms: false,
+      termsAccepted: false,
     },
   });
 
@@ -68,15 +55,16 @@ export default function SignUpPage() {
         password: data.password,
         phone: data.phone,
         role: data.role,
+        termsAccepted: data.termsAccepted,
       });
 
       if (result.success && result.data) {
         // store userID and email in local storage
-        localStorage.setItem("nexnode_user_id", result.data.userId);
-        localStorage.setItem("nexnode_user_email", data.email);
+        sessionStorage.setItem("nexnode_user_id", result.data.userId);
+        sessionStorage.setItem("nexnode_user_email", data.email);
 
         toast.success(result.data.message || "Registration successful!");
-        router.push("/two-factor");
+        router.push(`/two-factor?email=${encodeURIComponent(data.email)}&userId=${result.data.userId}`);
       } else {
         console.log(result.error);
         toast.error(result.error);
@@ -345,7 +333,7 @@ export default function SignUpPage() {
               {/* Terms and Conditions */}
               <FormField
                 control={form.control}
-                name="agreeToTerms"
+                name="termsAccepted"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-start space-x-1 space-y-0">
                     <FormControl>

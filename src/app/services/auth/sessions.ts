@@ -1,17 +1,7 @@
 import { cookies } from 'next/headers';
 import { jwtDecode } from 'jwt-decode';
 
-interface SessionPayload {
-  access_token: string;
-}
-
-interface JWTPayload {
-  user_id: string;
-  email: string;
-  role: string;
-  exp: number;
-  iat: number;
-}
+import { SessionPayload, JWTPayload } from './types';
 
 export async function createSession(payload: SessionPayload): Promise<void> {
   const cookieStore = await cookies();

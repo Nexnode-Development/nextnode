@@ -1,63 +1,36 @@
 "use server"
 
-import z from "zod";
+import { 
+  loginSchema, 
+  signupSchema,
+  resetPasswordRequestSchema,
+  verifyPasswordResetSchema,
+  resetPasswordSchema,
+  emailVerificationSchema,
+  verifyLoginOTPSchema,
+  generateLoginOTPSchema,
+  googleAuthSchema,
+  linkGoogleSchema,
+  unlinkGoogleSchema,
+  changePasswordSchema,
+  resendOTPSchema,
+  type LoginFormData,
+  type SignupFormData,
+  type ResetPasswordRequestFormData,
+  type VerifyPasswordResetFormData,
+  type ResetPasswordFormData,
+  type EmailVerificationFormData,
+  type VerifyLoginOTPFormData,
+  type GenerateLoginOTPFormData,
+  type GoogleAuthFormData,
+  type LinkGoogleFormData,
+  type UnlinkGoogleFormData,
+  type ChangePasswordFormData,
+  type ResendOTPFormData
+} from "@/lib/schemas";
 import http from "@/lib/axios";
 import { createSession, deleteSession } from "./sessions";
 import { redirect } from "next/navigation";
-
-
-const RegisterSchema = z.object({
-  fullName: z
-  .string({ error: 'First name is required' })
-  .min(1, 'First name is required'),
-  email: z
-    .string({ error: 'Email is required' })
-    .email({ error: 'Invalid email format' }),
-    phone: z
-    .string({ error: 'Phone number is required' })
-    .min(1, 'Phone number is required'),
-  password: z
-    .string({ error: 'Password is required' })
-    .min(8, 'Password must be at least 8 characters'),
-  role: z
-    .string({ error: 'Role is required' })
-    .min(1, 'Role is required')
-});
-
-const LoginSchema = z.object({
-  email: z
-    .string({ error: 'Email is required' })
-    .email({ error: 'Invalid email format' }),
-  password: z
-    .string({ error: 'Password is required' })
-    .min(1, 'Password is required'),
-});
-
-const TwoFactorSchema = z.object({
-  code: z
-    .string({ error: 'Verification code is required' })
-    .min(6, 'Verification code must be 6 digits')
-    .max(6, 'Verification code must be 6 digits'),
-});
-
-const ResetPasswordSchema = z.object({
-  email: z
-    .string({ error: 'Email is required' })
-    .email({ error: 'Invalid email format' }),
-});
-
-const CreateNewPasswordSchema = z.object({
-  password: z
-    .string({ error: 'Password is required' })
-    .min(8, 'Password must be at least 8 characters'),
-  confirmPassword: z
-    .string({ error: 'Confirm password is required' }),
-  token: z
-    .string({ error: 'Reset token is required' }),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
 
 // Helper function to safely extract error message
 function getErrorMessage(error: unknown): string {
@@ -73,51 +46,57 @@ function getErrorMessage(error: unknown): string {
   return 'An unexpected error occurred';
 }
 
-export async function Login(data: z.infer<typeof LoginSchema>) {
+export async function Login(data: LoginFormData) {
   try {
-    const validatedData = LoginSchema.parse(data);
-    console.log(validatedData)
+    const validatedData = loginSchema.parse(data);
     
     const response = await http.post('/auth/login', validatedData);
     
-    if (response.data?.data?.success) {
-      return { success: true, data: response.data.data };
+    if (response.data?.success) {
+      if (response.data.requiresAuth) {
+        return { 
+          success: true, 
+          requiresTwoFactor: true, 
+          data: response.data 
+        };
+      }
+      return { success: true, data: response.data };
     }
     
     return { success: false, error: 'Invalid credentials' };
   } catch (error: unknown) {
-    console.error('Login error:', error.response.message);
+    console.error('Login error:', error);
     return { success: false, error: getErrorMessage(error) };
   }
 }
 
-export async function Register(data: z.infer<typeof RegisterSchema>) {
+export async function Register(data: SignupFormData) {
   try {
-    const validatedData = RegisterSchema.parse(data);
+    const validatedData = signupSchema.parse(data);
     
     const response = await http.post('/auth/register', validatedData);
     
-    if (response.data?.data?.success) {
-      return { success: true, data: response.data.data };
+    if (response.data?.success) {
+      return { success: true, data: response.data };
     }
     
-    return { success: false, error: response.data?.data?.message || 'Registration failed' };
+    return { success: false, error: response.data?.message || 'Registration failed' };
   } catch (error: unknown) {
     console.error('Register error:', error);
     return { success: false, error: getErrorMessage(error) };
   }
 }
 
-export async function VerifyEmail(data: z.infer<typeof TwoFactorSchema> & { email: string }) {
+export async function VerifyEmail(data: EmailVerificationFormData) {
   try {
-    const validatedData = TwoFactorSchema.extend({ email: z.string().email() }).parse(data);
+    const validatedData = emailVerificationSchema.parse(data);
     
-    const response = await http.post('/auth/verify-email', {
-      email: validatedData.email,
-      otp: validatedData.code,
-    });
+    const response = await http.post('/auth/verify-email', validatedData);
     
     if (response.data.success) {
+      if (response.data.token) {
+        await createSession({ access_token: response.data.token });
+      }
       return { success: true, data: response.data };
     }
     
@@ -128,19 +107,78 @@ export async function VerifyEmail(data: z.infer<typeof TwoFactorSchema> & { emai
   }
 }
 
-export async function ResendTwoFactorCode() {
+export async function VerifyLoginOTP(data: VerifyLoginOTPFormData) {
   try {
-    const response = await http.post('/auth/resend-otp');
-    return { success: true, data: response.data };
+    const validatedData = verifyLoginOTPSchema.parse(data);
+    
+    const response = await http.post('/auth/verify-login-otp', validatedData);
+    
+    if (response.data.success && response.data.token) {
+      await createSession({ access_token: response.data.token });
+      return { success: true, data: response.data };
+    }
+    
+    return { success: false, error: 'Invalid verification code' };
   } catch (error: unknown) {
-    console.error('Resend 2FA code error:', error);
+    console.error('Verify login OTP error:', error);
     return { success: false, error: getErrorMessage(error) };
   }
 }
 
-export async function ResetPassword(data: z.infer<typeof ResetPasswordSchema>) {
+export async function GenerateLoginOTP(data: GenerateLoginOTPFormData) {
   try {
-    const validatedData = ResetPasswordSchema.parse(data);
+    const validatedData = generateLoginOTPSchema.parse(data);
+    
+    const response = await http.post('/auth/generate-login-otp', validatedData);
+    
+    return { success: true, data: response.data };
+  } catch (error: unknown) {
+    console.error('Generate login OTP error:', error);
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+export async function ResendOTP(data: ResendOTPFormData) {
+  try {
+    const validatedData = resendOTPSchema.parse(data);
+    
+    const response = await http.post('/auth/resend-otp', validatedData);
+    return { success: true, data: response.data };
+  } catch (error: unknown) {
+    console.error('Resend OTP error:', error);
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+export async function RequestPasswordReset(data: ResetPasswordRequestFormData) {
+  try {
+    const validatedData = resetPasswordRequestSchema.parse(data);
+    
+    const response = await http.post('/auth/request-password-reset', validatedData);
+    
+    return { success: true, data: response.data };
+  } catch (error: unknown) {
+    console.error('Request password reset error:', error);
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+export async function VerifyPasswordReset(data: VerifyPasswordResetFormData) {
+  try {
+    const validatedData = verifyPasswordResetSchema.parse(data);
+    
+    const response = await http.post('/auth/verify-password-reset', validatedData);
+    
+    return { success: true, data: response.data };
+  } catch (error: unknown) {
+    console.error('Verify password reset error:', error);
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+export async function ResetPassword(data: ResetPasswordFormData) {
+  try {
+    const validatedData = resetPasswordSchema.parse(data);
     
     const response = await http.post('/auth/reset-password', validatedData);
     
@@ -151,23 +189,15 @@ export async function ResetPassword(data: z.infer<typeof ResetPasswordSchema>) {
   }
 }
 
-export async function CreateNewPassword(data: z.infer<typeof CreateNewPasswordSchema>) {
+export async function ChangePassword(data: ChangePasswordFormData) {
   try {
-    const validatedData = CreateNewPasswordSchema.parse(data);
+    const validatedData = changePasswordSchema.parse(data);
     
-    const response = await http.post('/auth/reset-password/confirm', {
-      password: validatedData.password,
-      token: validatedData.token,
-    });
-    
-    if (response.data.access_token) {
-      await createSession({ access_token: response.data.access_token });
-      return { success: true, data: response.data };
-    }
+    const response = await http.post('/auth/change-password', validatedData);
     
     return { success: true, data: response.data };
   } catch (error: unknown) {
-    console.error('Create new password error:', error);
+    console.error('Change password error:', error);
     return { success: false, error: getErrorMessage(error) };
   }
 }
@@ -184,18 +214,46 @@ export async function Logout() {
   }
 }
 
-export async function GoogleAuth(code: string) {
+export async function GoogleAuth(data: GoogleAuthFormData) {
   try {
-    const response = await http.post('/auth/google-login', { code });
+    const validatedData = googleAuthSchema.parse(data);
     
-    if (response.data.access_token) {
-      await createSession({ access_token: response.data.access_token });
+    const response = await http.post('/auth/google-login', validatedData);
+    
+    if (response.data.success && response.data.token) {
+      await createSession({ access_token: response.data.token });
       return { success: true, data: response.data };
     }
     
     return { success: false, error: 'Google authentication failed' };
   } catch (error: unknown) {
     console.error('Google auth error:', error);
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+export async function LinkGoogle(data: LinkGoogleFormData) {
+  try {
+    const validatedData = linkGoogleSchema.parse(data);
+    
+    const response = await http.post('/auth/link-google', validatedData);
+    
+    return { success: true, data: response.data };
+  } catch (error: unknown) {
+    console.error('Link Google error:', error);
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+export async function UnlinkGoogle(data: UnlinkGoogleFormData) {
+  try {
+    const validatedData = unlinkGoogleSchema.parse(data);
+    
+    const response = await http.post('/auth/unlink-google', validatedData);
+    
+    return { success: true, data: response.data };
+  } catch (error: unknown) {
+    console.error('Unlink Google error:', error);
     return { success: false, error: getErrorMessage(error) };
   }
 }
