@@ -20,7 +20,6 @@ import Image from "next/image";
 import backgroundImage from "@/assets/background-image.png";
 import { toast, Toaster } from "sonner";
 import { VerifyEmail, VerifyLoginOTP, ResendOTP } from "@/app/services/auth";
-import React from "react";
 
 function TwoFactorAuthPage() {
   const [isResending, setIsResending] = useState(false);
@@ -32,17 +31,17 @@ function TwoFactorAuthPage() {
 
   React.useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const emailParam = urlParams.get('email');
-    const userIdParam = urlParams.get('userId');
-    
+    const emailParam = urlParams.get("email");
+    const userIdParam = urlParams.get("userId");
+
     if (emailParam && userIdParam) {
       setEmail(emailParam);
       setUserId(userIdParam);
       setIsLoginFlow(true);
     } else {
-      const storedEmail = sessionStorage.getItem('nexnode_user_email');
-      const storedUserId = sessionStorage.getItem('nexnode_user_id');
-      
+      const storedEmail = sessionStorage.getItem("nexnode_user_email");
+      const storedUserId = sessionStorage.getItem("nexnode_user_id");
+
       if (storedEmail) setEmail(storedEmail);
       if (storedUserId) setUserId(storedUserId);
       setIsLoginFlow(false);
@@ -70,7 +69,7 @@ function TwoFactorAuthPage() {
       }
 
       let result;
-      
+
       if (isLoginFlow) {
         result = await VerifyLoginOTP({ userId, otp: data.code });
       } else {
@@ -80,13 +79,13 @@ function TwoFactorAuthPage() {
       if (result.success) {
         if (isLoginFlow) {
           toast.success("Login successful!");
-          sessionStorage.removeItem('nexnode_user_email');
-          sessionStorage.removeItem('nexnode_user_id');
+          sessionStorage.removeItem("nexnode_user_email");
+          sessionStorage.removeItem("nexnode_user_id");
           router.push("/dashboard");
         } else {
           toast.success("Email verified successfully! Please log in.");
-          sessionStorage.removeItem('nexnode_user_email');
-          sessionStorage.removeItem('nexnode_user_id');
+          sessionStorage.removeItem("nexnode_user_email");
+          sessionStorage.removeItem("nexnode_user_id");
           router.push("/login");
         }
       } else {
@@ -196,7 +195,7 @@ function TwoFactorAuthPage() {
 
             {/* Subtitle */}
             <p className="text-gray-600 text-base">
-              Enter the 6-digit code sent to {email || 'your email'}
+              Enter the 6-digit code sent to {email || "your email"}
             </p>
           </div>
 
@@ -267,8 +266,8 @@ function TwoFactorAuthPage() {
           {/* Additional Info */}
           <div className="mt-8 text-center text-sm text-gray-500">
             <p>
-              {isLoginFlow 
-                ? "Complete your login by entering the verification code sent to your email." 
+              {isLoginFlow
+                ? "Complete your login by entering the verification code sent to your email."
                 : "Check your email for the 6-digit verification code to activate your account."}
               <br />
               The code will expire in 10 minutes.
